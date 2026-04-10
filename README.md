@@ -2,7 +2,7 @@
 
 Sistema de validación de claves presupuestarias usando los 3 catálogos oficiales de SADER.
 
-## 🚀 Funcionalidades
+##  Funcionalidades
 
 ### Validadores individuales:
 - **Pp-Partida**: Valida si una partida corresponde a un programa presupuestario
@@ -14,7 +14,7 @@ Sistema de validación de claves presupuestarias usando los 3 catálogos oficial
 - Validación masiva desde archivo PIPP
 - Exportación de resultados a Excel con sugerencias
 
-## 📋 Campos validados
+##  Campos validados
 
 | Campo | Dígitos | Validación |
 |-------|---------|------------|
@@ -35,20 +35,20 @@ Sistema de validación de claves presupuestarias usando los 3 catálogos oficial
 | AUX2 | 5 | Longitud |
 | COP | 2 | Longitud |
 
-## 📚 Catálogos requeridos
+##  Catálogos requeridos
 
 1. `Pp_-_Partida_Especifica_2026.xlsx`
 2. `Ramo_-_Pp_-_Funcion_-_AI_-_UR_2026.xlsx`
 3. `Ramo_Estructura_Economica_2026.xlsx`
 
-## 🛠️ Instalación local
+##  Instalación local
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 📦 Deploy en Streamlit Cloud
+##  Deploy en Streamlit Cloud
 
 1. Fork este repositorio
 2. Ve a [share.streamlit.io](https://share.streamlit.io)
