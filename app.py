@@ -473,7 +473,7 @@ st.markdown("""
 
 # Sidebar
 with st.sidebar:
-    st.markdown("### 📚 Cargar Catálogos")
+    st.markdown("###  Cargar Catálogos")
     st.markdown("---")
     
     archivo_pp = st.file_uploader("A. Pp-Partida Específica", type=['xlsx'], key="cat_a")
@@ -487,7 +487,7 @@ with st.sidebar:
     cat_estructura = cargar_catalogo_estructura(archivo_eco) if archivo_eco else None
     
     # Estadísticas
-    st.markdown("### 📊 Estadísticas")
+    st.markdown("###  Estadísticas")
     
     if cat_pp_partida:
         total_partidas = sum(len(v) for v in cat_pp_partida.values())
@@ -504,7 +504,7 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.caption("⬜ Catálogo A no cargado")
+        st.caption(" Catálogo A no cargado")
     
     if cat_relaciones:
         st.markdown(f"""
@@ -520,7 +520,7 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.caption("⬜ Catálogo B no cargado")
+        st.caption(" Catálogo B no cargado")
     
     if cat_estructura:
         st.markdown(f"""
@@ -530,36 +530,36 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.caption("⬜ Catálogo C no cargado")
+        st.caption(" Catálogo C no cargado")
 
 # Verificar catálogos
 hay_catalogos = cat_pp_partida or cat_relaciones or cat_estructura
 todos_catalogos = cat_pp_partida and cat_relaciones and cat_estructura
 
 if not hay_catalogos:
-    st.info("👈 Carga al menos un catálogo en la barra lateral para comenzar")
+    st.info(" Carga al menos un catálogo en la barra lateral para comenzar")
     st.stop()
 
 # Tabs
 if todos_catalogos:
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "🔍 Validación Individual",
-        "📁 Validación Masiva",
-        "📗 Pp-Partida",
-        "📘 UR-FIN-FUN-SF-AI-PP",
-        "📙 Partida-TG-FF",
-        "📖 Explorar Catálogo"
+        " Validación Individual",
+        " Validación Masiva",
+        " Pp-Partida",
+        " UR-FIN-FUN-SF-AI-PP",
+        " Partida-TG-FF",
+        " Explorar Catálogo"
     ])
 else:
     tabs_disponibles = []
     tab_map = {}
     if cat_pp_partida:
-        tabs_disponibles.append("📗 Pp-Partida")
-        tabs_disponibles.append("📖 Explorar Catálogo")
+        tabs_disponibles.append(" Pp-Partida")
+        tabs_disponibles.append(" Explorar Catálogo")
     if cat_relaciones:
-        tabs_disponibles.append("📘 UR-FIN-FUN-SF-AI-PP")
+        tabs_disponibles.append(" UR-FIN-FUN-SF-AI-PP")
     if cat_estructura:
-        tabs_disponibles.append("📙 Partida-TG-FF")
+        tabs_disponibles.append(" Partida-TG-FF")
     
     if not tabs_disponibles:
         st.stop()
@@ -616,9 +616,9 @@ if todos_catalogos:
                 total = len(res)
                 
                 if total_ok == total:
-                    st.markdown(f'<div class="result-valid"><strong>✅ VÁLIDO</strong> ({total_ok}/{total} campos)</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong> ({total_ok}/{total} campos)</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div class="result-invalid"><strong>❌ CON ERRORES</strong> ({total_ok}/{total} campos correctos)</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="result-invalid"><strong> CON ERRORES</strong> ({total_ok}/{total} campos correctos)</div>', unsafe_allow_html=True)
                 
                 st.markdown("#### Detalle")
                 campos = ['RAMO', 'UR', 'AÑO', 'FIN', 'FUN', 'SF', 'RG', 'AI', 'PP', 'PARTIDA', 'TG', 'FF', 'EF', 'PPI', 'AUX2', 'COP']
@@ -626,9 +626,9 @@ if todos_catalogos:
                     if campo in res:
                         valor = c_norm.get(campo, '')
                         if res[campo] == 'SI':
-                            st.success(f"✅ **{campo}** = `{valor}`")
+                            st.success(f" **{campo}** = `{valor}`")
                         else:
-                            st.error(f"❌ **{campo}** = `{valor}` → Válidos: {sug.get(campo, '')}")
+                            st.error(f" **{campo}** = `{valor}` → Válidos: {sug.get(campo, '')}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB: VALIDACIÓN MASIVA
@@ -644,7 +644,7 @@ if todos_catalogos:
             if claves is None:
                 st.error(mensaje)
             else:
-                st.info(f"📋 {mensaje} - **{len(claves)}** registros")
+                st.info(f" {mensaje} - **{len(claves)}** registros")
                 if st.button("✓ Validar todos", type="primary"):
                     resultados = []
                     progress = st.progress(0)
@@ -698,7 +698,7 @@ if tab_pp and cat_pp_partida:
                 st.caption(f"Disponibles: {', '.join(sorted(cat_pp_partida.keys())[:15])}")
             elif not partida_check or partida_check == "00000":
                 partidas = sorted(cat_pp_partida[pp_input])
-                st.success(f"✅ Pp **{pp_input}** tiene **{len(partidas)}** partidas válidas")
+                st.success(f" Pp **{pp_input}** tiene **{len(partidas)}** partidas válidas")
                 caps = {}
                 for p in partidas:
                     cap = p[0]
@@ -708,9 +708,9 @@ if tab_pp and cat_pp_partida:
                     with st.expander(f"Capítulo {cap}000 - {NOMBRE_CAPITULO.get(cap, '')} ({len(caps[cap])} partidas)"):
                         st.code(", ".join(caps[cap]))
             elif partida_check in cat_pp_partida[pp_input]:
-                st.markdown(f'<div class="result-valid"><strong>✅ VÁLIDO</strong><br>Partida <code>{partida_check}</code> corresponde a Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong><br>Partida <code>{partida_check}</code> corresponde a Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="result-invalid"><strong>❌ NO VÁLIDO</strong><br>Partida <code>{partida_check}</code> NO corresponde a Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="result-invalid"><strong> NO VÁLIDO</strong><br>Partida <code>{partida_check}</code> NO corresponde a Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
                 cap = partida_check[0]
                 similares = sorted([p for p in cat_pp_partida[pp_input] if p[0] == cap])
                 if similares:
@@ -827,15 +827,15 @@ if tab_rel and cat_relaciones:
             else:
                 errores = [r for r in resultados if r[2] == 'NO']
                 if not errores:
-                    st.markdown('<div class="result-valid"><strong>✅ VÁLIDO</strong></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="result-valid"><strong> VÁLIDO</strong></div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div class="result-invalid"><strong>❌ CON ERRORES</strong></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="result-invalid"><strong> CON ERRORES</strong></div>', unsafe_allow_html=True)
                 
                 for campo, valor, estado, validos in resultados:
                     if estado == 'SI':
-                        st.success(f"✅ **{campo}** = `{valor}`")
+                        st.success(f" **{campo}** = `{valor}`")
                     else:
-                        st.error(f"❌ **{campo}** = `{valor}` → Válidos: {', '.join(str(v) for v in validos[:15]) if validos else 'N/A'}")
+                        st.error(f" **{campo}** = `{valor}` → Válidos: {', '.join(str(v) for v in validos[:15]) if validos else 'N/A'}")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB: Partida-TG-FF
@@ -871,25 +871,25 @@ if tab_eco and cat_estructura:
             partida_n = normalizar(partida_c, 5) if partida_c else ""
             
             if partida_n and partida_n not in cat_estructura:
-                st.error(f"❌ Partida **{partida_n}** no existe en el catálogo")
+                st.error(f" Partida **{partida_n}** no existe en el catálogo")
                 cap = partida_n[0] if partida_n else ''
                 similares = sorted([p for p in cat_estructura.keys() if p[0] == cap])[:15]
                 if similares:
                     st.caption(f"Partidas cap {cap}000: {', '.join(similares)}")
             elif partida_n and not tg_c and not ff_c:
                 combos = sorted(cat_estructura[partida_n])
-                st.success(f"✅ Partida **{partida_n}** tiene {len(combos)} combinaciones TG-FF:")
+                st.success(f" Partida **{partida_n}** tiene {len(combos)} combinaciones TG-FF:")
                 for tg, ff in combos:
                     st.code(f"TG={tg}, FF={ff}")
             elif tg_c and not tg_c in COMBOS_TG_FF:
-                st.error(f"❌ TG **{tg_c}** no es válido → Válidos: {', '.join(sorted(COMBOS_TG_FF.keys()))}")
+                st.error(f" TG **{tg_c}** no es válido → Válidos: {', '.join(sorted(COMBOS_TG_FF.keys()))}")
             elif tg_c and not ff_c:
                 st.info(f"TG={tg_c} → FF válidos: {', '.join(COMBOS_TG_FF[tg_c])}")
             elif tg_c and ff_c:
                 if ff_c in COMBOS_TG_FF[tg_c]:
-                    st.markdown(f'<div class="result-valid"><strong>✅ VÁLIDO</strong><br>TG={tg_c}, FF={ff_c}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong><br>TG={tg_c}, FF={ff_c}</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div class="result-invalid"><strong>❌ NO VÁLIDO</strong><br>FF={ff_c} no corresponde a TG={tg_c}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="result-invalid"><strong> NO VÁLIDO</strong><br>FF={ff_c} no corresponde a TG={tg_c}</div>', unsafe_allow_html=True)
                     st.caption(f"FF válidos para TG={tg_c}: {', '.join(COMBOS_TG_FF[tg_c])}")
             elif not partida_n and not tg_c:
                 st.warning("Ingresa al menos Partida o TG")
