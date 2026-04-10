@@ -666,7 +666,7 @@ if todos_catalogos:
                         return ['background-color: #E8F5E9' if row['VÁLIDO'] == 'SI' else 'background-color: #FFEBEE'] * len(row)
                     st.dataframe(df_resultados.style.apply(highlight_valid, axis=1), use_container_width=True, height=400)
                     
-                    st.download_button("📥 Descargar resultados", generar_excel_resultados(resultados), "Validacion_Completa.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    st.download_button(" Descargar resultados", generar_excel_resultados(resultados), "Validacion_Completa.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB: Pp-Partida
