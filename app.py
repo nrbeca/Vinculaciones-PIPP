@@ -397,7 +397,7 @@ if todos_catalogos:
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([" Validación Individual", " Validación Masiva", " Pp-Partida", " UR-FIN-FUN-SF-AI-PP", " Partida-TG-FF", " Explorar Catálogo"])
 else:
     tabs_disponibles = []
-    if cat_pp_partida: tabs_disponibles += [" Pp-Partida", "📖 Explorar Catálogo"]
+    if cat_pp_partida: tabs_disponibles += [" Pp-Partida", " Explorar Catálogo"]
     if cat_relaciones: tabs_disponibles.append(" UR-FIN-FUN-SF-AI-PP")
     if cat_estructura: tabs_disponibles.append(" Partida-TG-FF")
     if not tabs_disponibles: st.stop()
@@ -436,7 +436,7 @@ if todos_catalogos:
             else:
                 total_ok = sum(1 for v in res.values() if v == 'SI')
                 if total_ok == len(res): st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong> ({total_ok}/{len(res)})</div>', unsafe_allow_html=True)
-                else: st.markdown(f'<div class="result-invalid"><strong>❌ CON ERRORES</strong> ({total_ok}/{len(res)})</div>', unsafe_allow_html=True)
+                else: st.markdown(f'<div class="result-invalid"><strong> CON ERRORES</strong> ({total_ok}/{len(res)})</div>', unsafe_allow_html=True)
                 st.markdown("#### Detalle")
                 for campo in ['RAMO', 'UR', 'AÑO', 'FIN', 'FUN', 'SF', 'RG', 'AI', 'PP', 'PARTIDA', 'TG', 'FF', 'EF', 'PPI', 'AUX2', 'COP']:
                     if campo in res:
@@ -452,7 +452,7 @@ if todos_catalogos:
             claves, mensaje = procesar_archivo_pipp(archivo_validar)
             if claves is None: st.error(mensaje)
             else:
-                st.info(f"📋 {mensaje} - **{len(claves)}** registros")
+                st.info(f" {mensaje} - **{len(claves)}** registros")
                 if st.button("✓ Validar todos", type="primary"):
                     resultados = []
                     progress = st.progress(0)
@@ -490,8 +490,8 @@ if tab_pp and cat_pp_partida:
                 for p in partidas: caps.setdefault(p[0], []).append(p)
                 for cap in sorted(caps.keys()):
                     with st.expander(f"Cap {cap}000 - {NOMBRE_CAPITULO.get(cap, '')} ({len(caps[cap])})"): st.code(", ".join(caps[cap]))
-            elif partida_check in cat_pp_partida[pp_input]: st.markdown(f'<div class="result-valid"><strong>✅ VÁLIDO</strong></div>', unsafe_allow_html=True)
-            else: st.markdown(f'<div class="result-invalid"><strong>❌ NO VÁLIDO</strong></div>', unsafe_allow_html=True)
+            elif partida_check in cat_pp_partida[pp_input]: st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong></div>', unsafe_allow_html=True)
+            else: st.markdown(f'<div class="result-invalid"><strong> NO VÁLIDO</strong></div>', unsafe_allow_html=True)
 
 # TAB 4: UR-FIN-FUN-SF-AI-PP
 tab_rel = tab4 if todos_catalogos else (tabs[2] if cat_pp_partida and cat_relaciones else (tabs[0] if cat_relaciones and not cat_pp_partida else None))
@@ -513,7 +513,7 @@ if tab_rel and cat_relaciones:
             if not resultados_b: st.warning("Ingresa al menos un campo")
             else:
                 errores = [r for r in resultados_b if r[2] == 'NO']
-                st.markdown('<div class="result-valid"><strong> VÁLIDO</strong></div>' if not errores else '<div class="result-invalid"><strong>❌ CON ERRORES</strong></div>', unsafe_allow_html=True)
+                st.markdown('<div class="result-valid"><strong> VÁLIDO</strong></div>' if not errores else '<div class="result-invalid"><strong> CON ERRORES</strong></div>', unsafe_allow_html=True)
                 for campo, valor, estado, validos in resultados_b:
                     if estado == 'SI': st.success(f" **{campo}** = `{valor}`")
                     else: st.error(f" **{campo}** = `{valor}` → Válidos: {', '.join(validos[:15]) if validos else 'N/A'}")
@@ -535,7 +535,7 @@ if tab_eco and cat_estructura:
         if validar_c:
             partida_n = normalizar(partida_c, 5) if partida_c else ""
             if not partida_n and not tg_c: st.warning("Ingresa Partida o TG")
-            elif partida_n and partida_n not in partida_tg_ff: st.error(f"❌ Partida **{partida_n}** no existe")
+            elif partida_n and partida_n not in partida_tg_ff: st.error(f" Partida **{partida_n}** no existe")
             elif partida_n and not tg_c:
                 combos = sorted(partida_tg_ff[partida_n])
                 st.success(f" **{partida_n}** tiene {len(combos)} combos TG-FF:")
@@ -544,8 +544,8 @@ if tab_eco and cat_estructura:
                 if tg_c in tg_ff_por_partida.get(partida_n, {}): st.success(f"TG={tg_c} → FF válidos: {', '.join(sorted(tg_ff_por_partida[partida_n][tg_c]))}")
                 else: st.error(f" TG **{tg_c}** no válido. Válidos: {', '.join(sorted(partida_tg.get(partida_n, set())))}")
             elif partida_n and tg_c and ff_c:
-                if tg_c in tg_ff_por_partida.get(partida_n, {}) and ff_c in tg_ff_por_partida[partida_n][tg_c]: st.markdown('<div class="result-valid"><strong>✅ VÁLIDO</strong></div>', unsafe_allow_html=True)
-                else: st.markdown(f'<div class="result-invalid"><strong>❌ NO VÁLIDO</strong></div>', unsafe_allow_html=True)
+                if tg_c in tg_ff_por_partida.get(partida_n, {}) and ff_c in tg_ff_por_partida[partida_n][tg_c]: st.markdown('<div class="result-valid"><strong> VÁLIDO</strong></div>', unsafe_allow_html=True)
+                else: st.markdown(f'<div class="result-invalid"><strong> NO VÁLIDO</strong></div>', unsafe_allow_html=True)
 
 # TAB 6: Explorar
 tab_explorar = tab6 if todos_catalogos else (tabs[1] if cat_pp_partida else None)
