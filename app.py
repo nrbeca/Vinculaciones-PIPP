@@ -60,6 +60,17 @@ st.markdown("""
         padding: 1rem;
         margin: 0.5rem 0;
     }
+    .login-box {
+        max-width: 420px;
+        margin: 4rem auto;
+        background: white;
+        border-radius: 14px;
+        padding: 2.5rem 2rem;
+        box-shadow: 0 6px 30px rgba(107,29,61,0.15);
+        border-top: 6px solid #6B1D3D;
+    }
+    .login-box h2 { color: #6B1D3D; text-align: center; margin-bottom: 0.3rem; }
+    .login-box p  { color: #888; text-align: center; font-size: 0.9rem; margin-bottom: 1.5rem; }
     .stButton > button {
         background: var(--guinda);
         color: white;
@@ -73,6 +84,30 @@ st.markdown("""
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
+# ── LOGIN ──────────────────────────────────────────────────────────────────────
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    st.markdown("""
+    <div class="login-box">
+        <h2>✓ Validador PIPP 2026</h2>
+        <p>SADER · Secretaría de Agricultura y Desarrollo Rural</p>
+    </div>
+    """, unsafe_allow_html=True)
+    col_l, col_c, col_r = st.columns([1, 2, 1])
+    with col_c:
+        pwd = st.text_input("Contraseña", type="password", key="login_pwd",
+                            placeholder="Ingresa la contraseña")
+        if st.button("Ingresar", use_container_width=True):
+            if pwd == "#sader 2026":
+                st.session_state["autenticado"] = True
+                st.rerun()
+            else:
+                st.error("Contraseña incorrecta")
+    st.stop()
+# ── FIN LOGIN ──────────────────────────────────────────────────────────────────
 
 EFS_VALIDOS = ['00'] + [str(i).zfill(2) for i in range(1, 35)]
 RGS_VALIDOS = ['00', '01', '02', '03']
@@ -385,6 +420,10 @@ with st.sidebar:
     if cat_estructura:
         st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_estructura["partida_tg_ff"])}</div><div class="stat-label">Partidas con TG-FF</div></div>', unsafe_allow_html=True)
     else: st.caption(" Catálogo C no cargado")
+    st.markdown("---")
+    if st.button("🔒 Cerrar sesión"):
+        st.session_state["autenticado"] = False
+        st.rerun()
 
 hay_catalogos = cat_pp_partida or cat_relaciones or cat_estructura
 todos_catalogos = cat_pp_partida and cat_relaciones and cat_estructura
@@ -441,7 +480,7 @@ if todos_catalogos:
                 for campo in ['RAMO', 'UR', 'AÑO', 'FIN', 'FUN', 'SF', 'RG', 'AI', 'PP', 'PARTIDA', 'TG', 'FF', 'EF', 'PPI', 'AUX2', 'COP']:
                     if campo in res:
                         if res[campo] == 'SI': st.success(f" **{campo}** = `{c_norm.get(campo, '')}`")
-                        else: st.error(f"❌ **{campo}** = `{c_norm.get(campo, '')}` → Válidos: {sug.get(campo, '')}")
+                        else: st.error(f" **{campo}** = `{c_norm.get(campo, '')}` → Válidos: {sug.get(campo, '')}")
 
 # TAB 2: Validación Masiva
 if todos_catalogos:
