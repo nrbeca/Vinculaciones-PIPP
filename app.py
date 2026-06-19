@@ -279,7 +279,7 @@ def sidebar_catalogo():
     partidas_por_pp = catalogos.get("pp_partida", {})
 
     with st.sidebar:
-        st.markdown("### 📂 Catálogo Base")
+        st.markdown("###  Catálogo Base")
 
         if partidas_por_pp:
             meta = catalogos.get("pp_partida_meta", {})
@@ -295,7 +295,7 @@ def sidebar_catalogo():
             st.metric("Total partidas", sum(len(v) for v in partidas_por_pp.values()))
 
             st.markdown("---")
-            with st.expander("🔄 Actualizar catálogo"):
+            with st.expander(" Actualizar catálogo"):
                 st.caption("Sube un nuevo archivo para reemplazar el catálogo guardado")
                 nuevo = st.file_uploader(
                     "Nuevo catálogo Pp-Partida",
@@ -346,7 +346,7 @@ def sidebar_catalogo():
 
         # Cerrar sesión
         st.markdown("---")
-        if st.button("🔒 Cerrar sesión", use_container_width=True):
+        if st.button(" Cerrar sesión", use_container_width=True):
             st.session_state["autenticado"] = False
             st.rerun()
 
@@ -372,13 +372,13 @@ st.markdown("""
 partidas_por_pp = sidebar_catalogo()
 
 if not partidas_por_pp:
-    st.info("📂 **Primero sube el catálogo** `Pp_-_Partida_Especifica_2026.xlsx` en la barra lateral para comenzar.")
+    st.info(" **Primero sube el catálogo** `Pp_-_Partida_Especifica_2026.xlsx` en la barra lateral para comenzar.")
     st.stop()
 
 tab1, tab2, tab3 = st.tabs([
-    "🔍 Consulta Individual",
-    "📋 Validación Masiva",
-    "📚 Explorar Catálogo"
+    " Consulta Individual",
+    " Validación Masiva",
+    " Explorar Catálogo"
 ])
 
 # ══ TAB 1: CONSULTA INDIVIDUAL ════════════════════════════════════════════════
@@ -410,9 +410,9 @@ with tab1:
                 with st.expander(f"Capítulo {cap}000 ({len(capitulos[cap])} partidas)"):
                     st.markdown(" ".join([f"`{p}`" for p in capitulos[cap]]))
         elif partida_check in partidas_por_pp[pp_input]:
-            st.markdown(f'<div class="result-valid"><strong>✅ VÁLIDO</strong><br>La partida <code>{partida_check}</code> está autorizada para el Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong><br>La partida <code>{partida_check}</code> está autorizada para el Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="result-invalid"><strong>❌ NO VÁLIDO</strong><br>La partida <code>{partida_check}</code> <strong>no</strong> está autorizada para el Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="result-invalid"><strong> NO VÁLIDO</strong><br>La partida <code>{partida_check}</code> <strong>no</strong> está autorizada para el Pp <code>{pp_input}</code></div>', unsafe_allow_html=True)
             cap = partida_check[0]
             similares = sorted([p for p in partidas_por_pp[pp_input] if p[0] == cap])
             if similares:
