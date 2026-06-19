@@ -5,6 +5,9 @@ Aplicación completa para validar combinaciones usando los 3 catálogos oficiale
 
 import streamlit as st
 import pandas as pd
+import pickle
+import base64
+import requests
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
@@ -109,6 +112,70 @@ if not st.session_state["autenticado"]:
     st.stop()
 # ── FIN LOGIN ──────────────────────────────────────────────────────────────────
 
+# ── GITHUB PERSISTENCE ────────────────────────────────────────────────────────
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
+GITHUB_REPO  = st.secrets.get("GITHUB_REPO", "")   # e.g. "nrbeca/vinculaciones-pipp"
+GITHUB_BRANCH = st.secrets.get("GITHUB_BRANCH", "main")
+
+ARCHIVOS_PKL = {
+    "pp":  "data_persistente/cat_pp_partida.pkl",
+    "rel": "data_persistente/cat_relaciones.pkl",
+    "eco": "data_persistente/cat_estructura.pkl",
+}
+
+def _gh_headers():
+    return {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+
+def _gh_get_file(path):
+    """Descarga un archivo del repo. Devuelve (contenido_bytes, sha) o (None, None)."""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}?ref={GITHUB_BRANCH}"
+    r = requests.get(url, headers=_gh_headers(), timeout=15)
+    if r.status_code == 200:
+        data = r.json()
+        return base64.b64decode(data["content"]), data["sha"]
+    return None, None
+
+def _gh_put_file(path, content_bytes, sha=None, message="update catalog"):
+    """Sube o actualiza un archivo en el repo."""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+    payload = {
+        "message": message,
+        "content": base64.b64encode(content_bytes).decode(),
+        "branch": GITHUB_BRANCH,
+    }
+    if sha:
+        payload["sha"] = sha
+    r = requests.put(url, headers=_gh_headers(), json=payload, timeout=30)
+    return r.status_code in (200, 201)
+
+def cargar_desde_github(key):
+    """Carga el catálogo desde GitHub y lo deserializa."""
+    path = ARCHIVOS_PKL[key]
+    data, _ = _gh_get_file(path)
+    if data:
+        try:
+            return pickle.loads(data)
+        except Exception:
+            return None
+    return None
+
+def guardar_en_github(key, obj):
+    """Serializa el objeto y lo sube a GitHub."""
+    path = ARCHIVOS_PKL[key]
+    content_bytes = pickle.dumps(obj)
+    _, sha = _gh_get_file(path)          # obtiene sha si ya existe
+    nombres = {"pp": "Catálogo A", "rel": "Catálogo B", "eco": "Catálogo C"}
+    return _gh_put_file(path, content_bytes, sha=sha,
+                        message=f"chore: actualizar {nombres[key]}")
+
+# Carga inicial desde GitHub (con caché de sesión para no re-descargar en cada rerun)
+for key in ("pp", "rel", "eco"):
+    sk = f"cat_{key}"
+    if sk not in st.session_state:
+        with st.spinner(f"Cargando catálogos desde repositorio..."):
+            st.session_state[sk] = cargar_desde_github(key)
+
+# ── CONSTANTES ─────────────────────────────────────────────────────────────────
 EFS_VALIDOS = ['00'] + [str(i).zfill(2) for i in range(1, 35)]
 RGS_VALIDOS = ['00', '01', '02', '03']
 NOMBRE_CAPITULO = {
@@ -213,7 +280,7 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
     partida_tg = cat_estructura['partida_tg']
     tg_ff_por_partida = cat_estructura['tg_ff_por_partida']
     all_tgs = cat_estructura['all_tgs']
-    
+
     if c['RAMO']:
         res['RAMO'] = 'SI' if c['RAMO'] == '08' else 'NO'
         if res['RAMO'] == 'NO': sug['RAMO'] = '08'
@@ -282,7 +349,6 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
             for ps in cat_pp_partida.values(): todas.update(ps)
             res['PARTIDA'] = 'SI' if c['PARTIDA'] in todas else 'NO'
             if res['PARTIDA'] == 'NO': sug['PARTIDA'] = '(especifica PP)'
-    # TG - desde catálogo C
     if c['TG']:
         if c['PARTIDA'] and c['PARTIDA'] in partida_tg:
             tgs_validos = sorted(partida_tg[c['PARTIDA']])
@@ -291,7 +357,6 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
         else:
             res['TG'] = 'SI' if c['TG'] in all_tgs else 'NO'
             if res['TG'] == 'NO': sug['TG'] = ', '.join(sorted(all_tgs))
-    # FF - desde catálogo C
     if c['FF']:
         if c['PARTIDA'] and c['TG'] and c['PARTIDA'] in tg_ff_por_partida:
             if c['TG'] in tg_ff_por_partida[c['PARTIDA']]:
@@ -313,13 +378,13 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
         if res['EF'] == 'NO': sug['EF'] = '00 a 34'
     if c['PPI'] and c['PPI'] != '00000000000':
         res['PPI'] = 'SI' if len(c['PPI']) == 11 else 'NO'
-        if res['PPI'] == 'NO': sug['PPI'] = f'11 díg'
+        if res['PPI'] == 'NO': sug['PPI'] = '11 díg'
     if c['AUX2'] and c['AUX2'] != '00000':
         res['AUX2'] = 'SI' if len(c['AUX2']) == 5 else 'NO'
-        if res['AUX2'] == 'NO': sug['AUX2'] = f'5 díg'
+        if res['AUX2'] == 'NO': sug['AUX2'] = '5 díg'
     if c['COP'] and c['COP'] != '00':
         res['COP'] = 'SI' if len(c['COP']) == 2 else 'NO'
-        if res['COP'] == 'NO': sug['COP'] = f'2 díg'
+        if res['COP'] == 'NO': sug['COP'] = '2 díg'
     return res, sug, c
 
 def procesar_archivo_pipp(archivo):
@@ -389,7 +454,7 @@ def generar_excel_resultados(resultados):
     output.seek(0)
     return output
 
-# INTERFAZ
+# ── INTERFAZ ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="main-header">
     <h1>✓ Validador de Claves Presupuestarias PIPP 2026</h1>
@@ -397,39 +462,65 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+cat_pp_partida = st.session_state.get("cat_pp")
+cat_relaciones  = st.session_state.get("cat_rel")
+cat_estructura  = st.session_state.get("cat_eco")
+
 with st.sidebar:
-    st.markdown("###  Cargar Catálogos")
+    st.markdown("###  Catálogos")
     st.markdown("---")
-    archivo_pp = st.file_uploader("A. Pp-Partida Específica", type=['xlsx'], key="cat_a")
-    archivo_rel = st.file_uploader("B. Ramo-Pp-Función-AI-UR", type=['xlsx'], key="cat_b")
-    archivo_eco = st.file_uploader("C. Estructura Económica", type=['xlsx'], key="cat_c")
-    st.markdown("---")
-    cat_pp_partida = cargar_catalogo_pp_partida(archivo_pp) if archivo_pp else None
-    cat_relaciones = cargar_catalogo_relaciones(archivo_rel) if archivo_rel else None
-    cat_estructura = cargar_catalogo_estructura(archivo_eco) if archivo_eco else None
+
+    LABELS = {
+        "pp":  ("A. Pp-Partida Específica",  "cat_pp",  cargar_catalogo_pp_partida),
+        "rel": ("B. Ramo-Pp-Función-AI-UR",  "cat_rel", cargar_catalogo_relaciones),
+        "eco": ("C. Estructura Económica",    "cat_eco", cargar_catalogo_estructura),
+    }
+
+    for key, (label, sk, parser) in LABELS.items():
+        ya = st.session_state.get(sk) is not None
+        estado = " Cargado" if ya else " Sin cargar"
+        st.markdown(f"**{label}**  \n{estado}")
+        archivo = st.file_uploader("Actualizar" if ya else "Subir", type=['xlsx'], key=f"up_{key}")
+        if archivo:
+            with st.spinner(f"Procesando y guardando {label}..."):
+                datos = parser(archivo)
+                ok = guardar_en_github(key, datos)
+            if ok:
+                st.session_state[sk] = datos
+                st.success("Guardado ✓")
+                st.rerun()
+            else:
+                st.error("Error al guardar en GitHub. Revisa el token en secrets.")
+        st.markdown("---")
+
+    cat_pp_partida = st.session_state.get("cat_pp")
+    cat_relaciones  = st.session_state.get("cat_rel")
+    cat_estructura  = st.session_state.get("cat_eco")
+
     st.markdown("###  Estadísticas")
     if cat_pp_partida:
         total_partidas = sum(len(v) for v in cat_pp_partida.values())
         st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_pp_partida)}</div><div class="stat-label">Programas (Pp)</div></div>', unsafe_allow_html=True)
         st.markdown(f'<div class="stat-card"><div class="stat-number">{total_partidas:,}</div><div class="stat-label">Partidas totales</div></div>', unsafe_allow_html=True)
-    else: st.caption(" Catálogo A no cargado")
+    else: st.caption("Catálogo A no cargado")
     if cat_relaciones:
         st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_relaciones["urs"])}</div><div class="stat-label">Unidades Responsables</div></div>', unsafe_allow_html=True)
         st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_relaciones["ur_fin_fun_sf_ai_pp"]):,}</div><div class="stat-label">Combinaciones válidas</div></div>', unsafe_allow_html=True)
-    else: st.caption(" Catálogo B no cargado")
+    else: st.caption("Catálogo B no cargado")
     if cat_estructura:
         st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_estructura["partida_tg_ff"])}</div><div class="stat-label">Partidas con TG-FF</div></div>', unsafe_allow_html=True)
-    else: st.caption(" Catálogo C no cargado")
+    else: st.caption("Catálogo C no cargado")
+
     st.markdown("---")
-    if st.button("🔒 Cerrar sesión"):
+    if st.button(" Cerrar sesión"):
         st.session_state["autenticado"] = False
         st.rerun()
 
-hay_catalogos = cat_pp_partida or cat_relaciones or cat_estructura
+hay_catalogos  = cat_pp_partida or cat_relaciones or cat_estructura
 todos_catalogos = cat_pp_partida and cat_relaciones and cat_estructura
 
 if not hay_catalogos:
-    st.info(" Carga al menos un catálogo en la barra lateral para comenzar")
+    st.info(" Carga al menos un catálogo en la barra lateral para comenzar.")
     st.stop()
 
 if todos_catalogos:
