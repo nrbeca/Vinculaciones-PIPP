@@ -5,8 +5,6 @@ Aplicación completa para validar combinaciones usando los 3 catálogos oficiale
 
 import streamlit as st
 import pandas as pd
-import os
-import pickle
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
@@ -62,17 +60,6 @@ st.markdown("""
         padding: 1rem;
         margin: 0.5rem 0;
     }
-    .login-box {
-        max-width: 420px;
-        margin: 4rem auto;
-        background: white;
-        border-radius: 14px;
-        padding: 2.5rem 2rem;
-        box-shadow: 0 6px 30px rgba(107,29,61,0.15);
-        border-top: 6px solid #6B1D3D;
-    }
-    .login-box h2 { color: #6B1D3D; text-align: center; margin-bottom: 0.3rem; }
-    .login-box p  { color: #888; text-align: center; font-size: 0.9rem; margin-bottom: 1.5rem; }
     .stButton > button {
         background: var(--guinda);
         color: white;
@@ -87,14 +74,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── CONSTANTES ────────────────────────────────────────────────────────────────
-CONTRASEÑA = "#sader 2026"
-DATA_DIR = "data_persistente"
-PICKLE_PP   = os.path.join(DATA_DIR, "cat_pp_partida.pkl")
-PICKLE_REL  = os.path.join(DATA_DIR, "cat_relaciones.pkl")
-PICKLE_ECO  = os.path.join(DATA_DIR, "cat_estructura.pkl")
-os.makedirs(DATA_DIR, exist_ok=True)
-
 EFS_VALIDOS = ['00'] + [str(i).zfill(2) for i in range(1, 35)]
 RGS_VALIDOS = ['00', '01', '02', '03']
 NOMBRE_CAPITULO = {
@@ -103,31 +82,6 @@ NOMBRE_CAPITULO = {
     '7': 'Inversiones Financieras', '8': 'Participaciones', '9': 'Deuda Pública'
 }
 
-# ─── LOGIN ─────────────────────────────────────────────────────────────────────
-if "autenticado" not in st.session_state:
-    st.session_state["autenticado"] = False
-
-if not st.session_state["autenticado"]:
-    st.markdown("""
-    <div class="login-box">
-        <h2>✓ Validador PIPP 2026</h2>
-        <p>SADER · Secretaría de Agricultura y Desarrollo Rural</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col_l, col_c, col_r = st.columns([1, 2, 1])
-    with col_c:
-        pwd = st.text_input("Contraseña", type="password", key="login_pwd",
-                            placeholder="Ingresa la contraseña")
-        if st.button("Ingresar", use_container_width=True):
-            if pwd == CONTRASEÑA:
-                st.session_state["autenticado"] = True
-                st.rerun()
-            else:
-                st.error("Contraseña incorrecta")
-    st.stop()
-
-# ─── FUNCIONES DE CATÁLOGO ─────────────────────────────────────────────────────
 def normalizar(valor, digitos=None):
     if valor is None: return ''
     valor = str(valor).strip()
@@ -141,7 +95,7 @@ def cargar_catalogo_pp_partida(archivo):
     df = df.iloc[1:].reset_index(drop=True)
     partidas_por_pp = {}
     for _, row in df.iterrows():
-        mod  = str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) else ''
+        mod = str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) else ''
         prog = normalizar(row.iloc[4], 3)
         partida = normalizar(row.iloc[6], 5)
         if mod and prog and partida:
@@ -157,14 +111,14 @@ def cargar_catalogo_relaciones(archivo):
     cat_urs, cat_ur_fin, cat_ur_fin_fun = set(), set(), set()
     cat_ur_fin_fun_sf, cat_ur_fin_fun_sf_ai, cat_ur_fin_fun_sf_ai_pp = set(), set(), set()
     for _, row in df.iterrows():
-        ur  = str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) else ''
+        ur = str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) else ''
         fin = str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) else ''
         fun = str(row.iloc[6]).strip() if pd.notna(row.iloc[6]) else ''
-        sf  = normalizar(row.iloc[8], 2)
-        ai  = normalizar(row.iloc[10], 3)
+        sf = normalizar(row.iloc[8], 2)
+        ai = normalizar(row.iloc[10], 3)
         mod = str(row.iloc[12]).strip() if pd.notna(row.iloc[12]) else ''
-        prog= normalizar(row.iloc[14], 3)
-        pp  = f"{mod}{prog}"
+        prog = normalizar(row.iloc[14], 3)
+        pp = f"{mod}{prog}"
         if ur:
             cat_urs.add(ur)
             if fin:
@@ -198,84 +152,11 @@ def cargar_catalogo_estructura(archivo):
             if partida not in tg_ff_por_partida: tg_ff_por_partida[partida] = {}
             if tg not in tg_ff_por_partida[partida]: tg_ff_por_partida[partida][tg] = set()
             tg_ff_por_partida[partida][tg].add(ff)
-            all_tgs.add(tg); all_ffs.add(ff)
+            all_tgs.add(tg)
+            all_ffs.add(ff)
     return {'partida_tg_ff': partida_tg_ff, 'partida_tg': partida_tg,
             'tg_ff_por_partida': tg_ff_por_partida, 'all_tgs': all_tgs, 'all_ffs': all_ffs}
 
-def guardar_pickle(obj, ruta):
-    with open(ruta, 'wb') as f:
-        pickle.dump(obj, f)
-
-def cargar_pickle(ruta):
-    if os.path.exists(ruta):
-        with open(ruta, 'rb') as f:
-            return pickle.load(f)
-    return None
-
-# ─── CARGAR CATÁLOGOS (persistentes o desde upload) ────────────────────────────
-cat_pp_partida = cargar_pickle(PICKLE_PP)
-cat_relaciones  = cargar_pickle(PICKLE_REL)
-cat_estructura  = cargar_pickle(PICKLE_ECO)
-
-# ─── HEADER ────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="main-header">
-    <h1>✓ Validador de Claves Presupuestarias PIPP 2026</h1>
-    <p>Sistema de validación usando los 3 catálogos oficiales de SADER</p>
-</div>
-""", unsafe_allow_html=True)
-
-# ─── SIDEBAR ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("###  Catálogos")
-    st.markdown("---")
-
-    # Estado de cada catálogo
-    for label, pkl, key_upload, key_proc, parse_fn in [
-        ("A. Pp-Partida Específica",      PICKLE_PP,  "cat_a", "pp",  "pp"),
-        ("B. Ramo-Pp-Función-AI-UR",      PICKLE_REL, "cat_b", "rel", "rel"),
-        ("C. Estructura Económica",        PICKLE_ECO, "cat_c", "eco", "eco"),
-    ]:
-        ya_cargado = os.path.exists(pkl)
-        estado = " Cargado" if ya_cargado else " Sin cargar"
-        st.markdown(f"**{label}**  \n{estado}")
-        archivo = st.file_uploader("Actualizar" if ya_cargado else "Subir", type=['xlsx'], key=key_upload)
-        if archivo:
-            with st.spinner("Procesando..."):
-                if parse_fn == "pp":
-                    datos = cargar_catalogo_pp_partida(archivo)
-                    guardar_pickle(datos, PICKLE_PP)
-                    cat_pp_partida = datos
-                elif parse_fn == "rel":
-                    datos = cargar_catalogo_relaciones(archivo)
-                    guardar_pickle(datos, PICKLE_REL)
-                    cat_relaciones = datos
-                else:
-                    datos = cargar_catalogo_estructura(archivo)
-                    guardar_pickle(datos, PICKLE_ECO)
-                    cat_estructura = datos
-            st.success("Guardado ✓")
-            st.rerun()
-        st.markdown("---")
-
-    # Estadísticas
-    st.markdown("###  Estadísticas")
-    if cat_pp_partida:
-        total_partidas = sum(len(v) for v in cat_pp_partida.values())
-        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_pp_partida)}</div><div class="stat-label">Programas (Pp)</div></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stat-card"><div class="stat-number">{total_partidas:,}</div><div class="stat-label">Partidas totales</div></div>', unsafe_allow_html=True)
-    if cat_relaciones:
-        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_relaciones["urs"])}</div><div class="stat-label">Unidades Responsables</div></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_relaciones["ur_fin_fun_sf_ai_pp"]):,}</div><div class="stat-label">Combinaciones válidas</div></div>', unsafe_allow_html=True)
-    if cat_estructura:
-        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_estructura["partida_tg_ff"])}</div><div class="stat-label">Partidas con TG-FF</div></div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    if st.button(" Cerrar sesión"):
-        st.session_state["autenticado"] = False
-        st.rerun()
-
-# ─── FUNCIONES DE VALIDACIÓN ───────────────────────────────────────────────────
 def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura):
     c = {
         'RAMO': normalizar(clave.get('RAMO'), 2), 'UR': normalizar(clave.get('UR')),
@@ -297,7 +178,7 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
     partida_tg = cat_estructura['partida_tg']
     tg_ff_por_partida = cat_estructura['tg_ff_por_partida']
     all_tgs = cat_estructura['all_tgs']
-
+    
     if c['RAMO']:
         res['RAMO'] = 'SI' if c['RAMO'] == '08' else 'NO'
         if res['RAMO'] == 'NO': sug['RAMO'] = '08'
@@ -366,6 +247,7 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
             for ps in cat_pp_partida.values(): todas.update(ps)
             res['PARTIDA'] = 'SI' if c['PARTIDA'] in todas else 'NO'
             if res['PARTIDA'] == 'NO': sug['PARTIDA'] = '(especifica PP)'
+    # TG - desde catálogo C
     if c['TG']:
         if c['PARTIDA'] and c['PARTIDA'] in partida_tg:
             tgs_validos = sorted(partida_tg[c['PARTIDA']])
@@ -374,6 +256,7 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
         else:
             res['TG'] = 'SI' if c['TG'] in all_tgs else 'NO'
             if res['TG'] == 'NO': sug['TG'] = ', '.join(sorted(all_tgs))
+    # FF - desde catálogo C
     if c['FF']:
         if c['PARTIDA'] and c['TG'] and c['PARTIDA'] in tg_ff_por_partida:
             if c['TG'] in tg_ff_por_partida[c['PARTIDA']]:
@@ -381,25 +264,27 @@ def validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura
                 res['FF'] = 'SI' if c['FF'] in ffs_validos else 'NO'
                 if res['FF'] == 'NO': sug['FF'] = ', '.join(ffs_validos)
             else:
-                res['FF'] = 'NO'; sug['FF'] = f'(TG {c["TG"]} no válido)'
+                res['FF'] = 'NO'
+                sug['FF'] = f'(TG {c["TG"]} no válido)'
         elif c['PARTIDA'] and c['PARTIDA'] in cat_estructura['partida_tg_ff']:
             ffs_validos = sorted(set(ff for tg, ff in cat_estructura['partida_tg_ff'][c['PARTIDA']]))
             res['FF'] = 'SI' if c['FF'] in ffs_validos else 'NO'
             if res['FF'] == 'NO': sug['FF'] = ', '.join(ffs_validos)
         else:
-            res['FF'] = 'NO'; sug['FF'] = '(especifica PARTIDA)'
+            res['FF'] = 'NO'
+            sug['FF'] = '(especifica PARTIDA)'
     if c['EF']:
         res['EF'] = 'SI' if c['EF'] in EFS_VALIDOS else 'NO'
         if res['EF'] == 'NO': sug['EF'] = '00 a 34'
     if c['PPI'] and c['PPI'] != '00000000000':
         res['PPI'] = 'SI' if len(c['PPI']) == 11 else 'NO'
-        if res['PPI'] == 'NO': sug['PPI'] = '11 díg'
+        if res['PPI'] == 'NO': sug['PPI'] = f'11 díg'
     if c['AUX2'] and c['AUX2'] != '00000':
         res['AUX2'] = 'SI' if len(c['AUX2']) == 5 else 'NO'
-        if res['AUX2'] == 'NO': sug['AUX2'] = '5 díg'
+        if res['AUX2'] == 'NO': sug['AUX2'] = f'5 díg'
     if c['COP'] and c['COP'] != '00':
         res['COP'] = 'SI' if len(c['COP']) == 2 else 'NO'
-        if res['COP'] == 'NO': sug['COP'] = '2 díg'
+        if res['COP'] == 'NO': sug['COP'] = f'2 díg'
     return res, sug, c
 
 def procesar_archivo_pipp(archivo):
@@ -409,7 +294,8 @@ def procesar_archivo_pipp(archivo):
         val0 = str(df_raw.iloc[i, 0]).strip() if pd.notna(df_raw.iloc[i, 0]) else ''
         val1 = str(df_raw.iloc[i, 1]).strip() if df_raw.shape[1] > 1 and pd.notna(df_raw.iloc[i, 1]) else ''
         if (val0.isdigit() and len(val0) <= 2 and val0 != '0') or (val1.isdigit() and len(val1) <= 2 and val1 != '0'):
-            fila_datos = i; break
+            fila_datos = i
+            break
     if fila_datos is None: return None, "No se detectó formato PIPP"
     df_datos = df_raw.iloc[fila_datos:].reset_index(drop=True)
     claves = []
@@ -417,21 +303,21 @@ def procesar_archivo_pipp(archivo):
         if len(row) < 13: continue
         clave = {
             'RAMO': str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else '',
-            'UR':   str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) else '',
-            'AÑO':  str(row.iloc[3]).strip() if pd.notna(row.iloc[3]) else '',
-            'FIN':  str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) else '',
-            'FUN':  str(row.iloc[5]).strip() if pd.notna(row.iloc[5]) else '',
-            'SF':   str(row.iloc[6]).strip() if pd.notna(row.iloc[6]) else '',
-            'RG':   str(row.iloc[7]).strip() if pd.notna(row.iloc[7]) else '',
-            'AI':   str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) else '',
-            'PP':   str(row.iloc[9]).strip() if pd.notna(row.iloc[9]) else '',
+            'UR': str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) else '',
+            'AÑO': str(row.iloc[3]).strip() if pd.notna(row.iloc[3]) else '',
+            'FIN': str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) else '',
+            'FUN': str(row.iloc[5]).strip() if pd.notna(row.iloc[5]) else '',
+            'SF': str(row.iloc[6]).strip() if pd.notna(row.iloc[6]) else '',
+            'RG': str(row.iloc[7]).strip() if pd.notna(row.iloc[7]) else '',
+            'AI': str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) else '',
+            'PP': str(row.iloc[9]).strip() if pd.notna(row.iloc[9]) else '',
             'PARTIDA': str(row.iloc[10]).strip() if pd.notna(row.iloc[10]) else '',
-            'TG':   str(row.iloc[11]).strip() if pd.notna(row.iloc[11]) else '',
-            'FF':   str(row.iloc[12]).strip() if pd.notna(row.iloc[12]) else '',
-            'EF':   str(row.iloc[13]).strip() if len(row) > 13 and pd.notna(row.iloc[13]) else '',
-            'PPI':  str(row.iloc[14]).strip() if len(row) > 14 and pd.notna(row.iloc[14]) else '',
+            'TG': str(row.iloc[11]).strip() if pd.notna(row.iloc[11]) else '',
+            'FF': str(row.iloc[12]).strip() if pd.notna(row.iloc[12]) else '',
+            'EF': str(row.iloc[13]).strip() if len(row) > 13 and pd.notna(row.iloc[13]) else '',
+            'PPI': str(row.iloc[14]).strip() if len(row) > 14 and pd.notna(row.iloc[14]) else '',
             'AUX2': str(row.iloc[15]).strip() if len(row) > 15 and pd.notna(row.iloc[15]) else '',
-            'COP':  str(row.iloc[16]).strip() if len(row) > 16 and pd.notna(row.iloc[16]) else '',
+            'COP': str(row.iloc[16]).strip() if len(row) > 16 and pd.notna(row.iloc[16]) else '',
         }
         if clave['RAMO'] and clave['RAMO'].lower() != 'nan': claves.append(clave)
     return claves, f"Formato PIPP (fila {fila_datos + 1})"
@@ -440,41 +326,75 @@ def generar_excel_resultados(resultados):
     wb = Workbook()
     ws = wb.active
     ws.title = "Validación"
-    si_fill     = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
-    no_fill     = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+    si_fill = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+    no_fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
     header_fill = PatternFill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')
-    border  = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-    center  = Alignment(horizontal='center')
-    campos  = ['RAMO','UR','AÑO','FIN','FUN','SF','RG','AI','PP','PARTIDA','TG','FF','EF','PPI','AUX2','COP']
-    headers = campos + ['VÁLIDO','ERRORES','SUGERENCIAS']
+    border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    center = Alignment(horizontal='center')
+    campos = ['RAMO', 'UR', 'AÑO', 'FIN', 'FUN', 'SF', 'RG', 'AI', 'PP', 'PARTIDA', 'TG', 'FF', 'EF', 'PPI', 'AUX2', 'COP']
+    headers = campos + ['VÁLIDO', 'ERRORES', 'SUGERENCIAS']
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
-        cell.font = Font(bold=True); cell.fill = header_fill; cell.border = border
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+        cell.border = border
     for i, r in enumerate(resultados, 2):
         for col, campo in enumerate(campos, 1):
             cell = ws.cell(row=i, column=col, value=r.get(campo, ''))
-            cell.border = border; cell.alignment = center
+            cell.border = border
+            cell.alignment = center
         cell = ws.cell(row=i, column=17, value=r['VÁLIDO'])
-        cell.border = border; cell.fill = si_fill if r['VÁLIDO'] == 'SI' else no_fill; cell.font = Font(bold=True)
+        cell.border = border
+        cell.fill = si_fill if r['VÁLIDO'] == 'SI' else no_fill
+        cell.font = Font(bold=True)
         ws.cell(row=i, column=18, value=r.get('ERRORES', '')).border = border
         ws.cell(row=i, column=19, value=r.get('SUGERENCIAS', '')).border = border
-    output = BytesIO(); wb.save(output); output.seek(0)
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
     return output
 
-# ─── CONTENIDO PRINCIPAL ───────────────────────────────────────────────────────
-hay_catalogos  = cat_pp_partida or cat_relaciones or cat_estructura
+# INTERFAZ
+st.markdown("""
+<div class="main-header">
+    <h1>✓ Validador de Claves Presupuestarias PIPP 2026</h1>
+    <p>Sistema de validación usando los 3 catálogos oficiales de SADER</p>
+</div>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.markdown("###  Cargar Catálogos")
+    st.markdown("---")
+    archivo_pp = st.file_uploader("A. Pp-Partida Específica", type=['xlsx'], key="cat_a")
+    archivo_rel = st.file_uploader("B. Ramo-Pp-Función-AI-UR", type=['xlsx'], key="cat_b")
+    archivo_eco = st.file_uploader("C. Estructura Económica", type=['xlsx'], key="cat_c")
+    st.markdown("---")
+    cat_pp_partida = cargar_catalogo_pp_partida(archivo_pp) if archivo_pp else None
+    cat_relaciones = cargar_catalogo_relaciones(archivo_rel) if archivo_rel else None
+    cat_estructura = cargar_catalogo_estructura(archivo_eco) if archivo_eco else None
+    st.markdown("###  Estadísticas")
+    if cat_pp_partida:
+        total_partidas = sum(len(v) for v in cat_pp_partida.values())
+        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_pp_partida)}</div><div class="stat-label">Programas (Pp)</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="stat-card"><div class="stat-number">{total_partidas:,}</div><div class="stat-label">Partidas totales</div></div>', unsafe_allow_html=True)
+    else: st.caption(" Catálogo A no cargado")
+    if cat_relaciones:
+        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_relaciones["urs"])}</div><div class="stat-label">Unidades Responsables</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_relaciones["ur_fin_fun_sf_ai_pp"]):,}</div><div class="stat-label">Combinaciones válidas</div></div>', unsafe_allow_html=True)
+    else: st.caption(" Catálogo B no cargado")
+    if cat_estructura:
+        st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_estructura["partida_tg_ff"])}</div><div class="stat-label">Partidas con TG-FF</div></div>', unsafe_allow_html=True)
+    else: st.caption(" Catálogo C no cargado")
+
+hay_catalogos = cat_pp_partida or cat_relaciones or cat_estructura
 todos_catalogos = cat_pp_partida and cat_relaciones and cat_estructura
 
 if not hay_catalogos:
-    st.info(" Sube los catálogos en la barra lateral para comenzar. Los catálogos se guardarán y estarán disponibles para todos los usuarios.")
+    st.info(" Carga al menos un catálogo en la barra lateral para comenzar")
     st.stop()
 
 if todos_catalogos:
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "✓ Validación Individual", " Validación Masiva",
-        " Pp-Partida", " UR-FIN-FUN-SF-AI-PP",
-        " Partida-TG-FF", " Explorar Catálogo"
-    ])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([" Validación Individual", " Validación Masiva", " Pp-Partida", " UR-FIN-FUN-SF-AI-PP", " Partida-TG-FF", " Explorar Catálogo"])
 else:
     tabs_disponibles = []
     if cat_pp_partida: tabs_disponibles += [" Pp-Partida", " Explorar Catálogo"]
@@ -491,43 +411,43 @@ if todos_catalogos:
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             ramo = st.text_input("RAMO", value="08", max_chars=2)
-            fin  = st.text_input("FIN", max_chars=1)
-            ai   = st.text_input("AI", max_chars=3)
-            tg   = st.text_input("TG", max_chars=1)
+            fin = st.text_input("FIN", max_chars=1)
+            ai = st.text_input("AI", max_chars=3)
+            tg = st.text_input("TG", max_chars=1)
         with col2:
-            ur   = st.text_input("UR", max_chars=3)
-            fun  = st.text_input("FUN", max_chars=1)
-            pp   = st.text_input("PP", max_chars=4)
-            ff   = st.text_input("FF", max_chars=1)
+            ur = st.text_input("UR", max_chars=3)
+            fun = st.text_input("FUN", max_chars=1)
+            pp = st.text_input("PP", max_chars=4)
+            ff = st.text_input("FF", max_chars=1)
         with col3:
-            año  = st.text_input("AÑO", value="2026", max_chars=4)
-            sf   = st.text_input("SF", max_chars=2)
+            año = st.text_input("AÑO", value="2026", max_chars=4)
+            sf = st.text_input("SF", max_chars=2)
             partida = st.text_input("PARTIDA", max_chars=5)
-            ef   = st.text_input("EF", max_chars=2)
+            ef = st.text_input("EF", max_chars=2)
         with col4:
-            rg   = st.text_input("RG", max_chars=2)
-            ppi  = st.text_input("PPI", max_chars=11)
+            rg = st.text_input("RG", max_chars=2)
+            ppi = st.text_input("PPI", max_chars=11)
             aux2 = st.text_input("AUX2", max_chars=5)
-            cop  = st.text_input("COP", max_chars=2)
+            cop = st.text_input("COP", max_chars=2)
         if st.button("✓ Validar", type="primary", key="validar_individual"):
-            clave = {'RAMO': ramo,'UR': ur,'AÑO': año,'FIN': fin,'FUN': fun,'SF': sf,'RG': rg,'AI': ai,'PP': pp,'PARTIDA': partida,'TG': tg,'FF': ff,'EF': ef,'PPI': ppi,'AUX2': aux2,'COP': cop}
+            clave = {'RAMO': ramo, 'UR': ur, 'AÑO': año, 'FIN': fin, 'FUN': fun, 'SF': sf, 'RG': rg, 'AI': ai, 'PP': pp, 'PARTIDA': partida, 'TG': tg, 'FF': ff, 'EF': ef, 'PPI': ppi, 'AUX2': aux2, 'COP': cop}
             res, sug, c_norm = validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura)
             if not res: st.warning("Ingresa al menos un campo")
             else:
                 total_ok = sum(1 for v in res.values() if v == 'SI')
-                if total_ok == len(res): st.markdown(f'<div class="result-valid"><strong>✓ VÁLIDO</strong> ({total_ok}/{len(res)})</div>', unsafe_allow_html=True)
-                else: st.markdown(f'<div class="result-invalid"><strong>✗ CON ERRORES</strong> ({total_ok}/{len(res)})</div>', unsafe_allow_html=True)
+                if total_ok == len(res): st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong> ({total_ok}/{len(res)})</div>', unsafe_allow_html=True)
+                else: st.markdown(f'<div class="result-invalid"><strong> CON ERRORES</strong> ({total_ok}/{len(res)})</div>', unsafe_allow_html=True)
                 st.markdown("#### Detalle")
-                for campo in ['RAMO','UR','AÑO','FIN','FUN','SF','RG','AI','PP','PARTIDA','TG','FF','EF','PPI','AUX2','COP']:
+                for campo in ['RAMO', 'UR', 'AÑO', 'FIN', 'FUN', 'SF', 'RG', 'AI', 'PP', 'PARTIDA', 'TG', 'FF', 'EF', 'PPI', 'AUX2', 'COP']:
                     if campo in res:
-                        if res[campo] == 'SI': st.success(f"✓ **{campo}** = `{c_norm.get(campo, '')}`")
-                        else: st.error(f"✗ **{campo}** = `{c_norm.get(campo, '')}` → Válidos: {sug.get(campo, '')}")
+                        if res[campo] == 'SI': st.success(f" **{campo}** = `{c_norm.get(campo, '')}`")
+                        else: st.error(f"❌ **{campo}** = `{c_norm.get(campo, '')}` → Válidos: {sug.get(campo, '')}")
 
 # TAB 2: Validación Masiva
 if todos_catalogos:
     with tab2:
         st.markdown("### Validar archivo completo")
-        archivo_validar = st.file_uploader("Archivo PIPP", type=['xlsx','xls'], key="validar_masivo")
+        archivo_validar = st.file_uploader("Archivo PIPP", type=['xlsx', 'xls'], key="validar_masivo")
         if archivo_validar:
             claves, mensaje = procesar_archivo_pipp(archivo_validar)
             if claves is None: st.error(mensaje)
@@ -540,7 +460,7 @@ if todos_catalogos:
                         res, sug, c_norm = validar_clave_completa(clave, cat_pp_partida, cat_relaciones, cat_estructura)
                         errores = [k for k, v in res.items() if v == 'NO']
                         sugerencias_txt = '; '.join(f"{k}:{sug[k]}" for k in errores if k in sug)
-                        resultados.append({**c_norm,'VÁLIDO': 'SI' if not errores else 'NO','ERRORES': ', '.join(errores),'SUGERENCIAS': sugerencias_txt})
+                        resultados.append({**c_norm, 'VÁLIDO': 'SI' if not errores else 'NO', 'ERRORES': ', '.join(errores), 'SUGERENCIAS': sugerencias_txt})
                         progress.progress((i + 1) / len(claves))
                     validos = sum(1 for r in resultados if r['VÁLIDO'] == 'SI')
                     c1, c2, c3 = st.columns(3)
@@ -562,16 +482,16 @@ if tab_pp and cat_pp_partida:
         with c3: st.markdown("<br>", unsafe_allow_html=True); buscar_pp = st.button("Buscar", key="buscar_pp")
         if buscar_pp and pp_input:
             partida_check = partida_input.zfill(5) if partida_input else ""
-            if pp_input not in cat_pp_partida: st.error(f"✗ Pp **{pp_input}** no existe")
+            if pp_input not in cat_pp_partida: st.error(f" Pp **{pp_input}** no existe")
             elif not partida_check or partida_check == "00000":
                 partidas = sorted(cat_pp_partida[pp_input])
-                st.success(f"✓ **{pp_input}** tiene **{len(partidas)}** partidas")
+                st.success(f" **{pp_input}** tiene **{len(partidas)}** partidas")
                 caps = {}
                 for p in partidas: caps.setdefault(p[0], []).append(p)
                 for cap in sorted(caps.keys()):
                     with st.expander(f"Cap {cap}000 - {NOMBRE_CAPITULO.get(cap, '')} ({len(caps[cap])})"): st.code(", ".join(caps[cap]))
-            elif partida_check in cat_pp_partida[pp_input]: st.markdown('<div class="result-valid"><strong>✓ VÁLIDO</strong></div>', unsafe_allow_html=True)
-            else: st.markdown('<div class="result-invalid"><strong>✗ NO VÁLIDO</strong></div>', unsafe_allow_html=True)
+            elif partida_check in cat_pp_partida[pp_input]: st.markdown(f'<div class="result-valid"><strong> VÁLIDO</strong></div>', unsafe_allow_html=True)
+            else: st.markdown(f'<div class="result-invalid"><strong> NO VÁLIDO</strong></div>', unsafe_allow_html=True)
 
 # TAB 4: UR-FIN-FUN-SF-AI-PP
 tab_rel = tab4 if todos_catalogos else (tabs[2] if cat_pp_partida and cat_relaciones else (tabs[0] if cat_relaciones and not cat_pp_partida else None))
@@ -579,51 +499,53 @@ if tab_rel and cat_relaciones:
     with tab_rel:
         st.markdown("### Validador UR-FIN-FUN-SF-AI-PP")
         c1, c2, c3, c4, c5, c6 = st.columns(6)
-        with c1: ur_b  = st.text_input("UR", max_chars=3, key="ur_b").upper().strip()
+        with c1: ur_b = st.text_input("UR", max_chars=3, key="ur_b").upper().strip()
         with c2: fin_b = st.text_input("FIN", max_chars=1, key="fin_b").strip()
         with c3: fun_b = st.text_input("FUN", max_chars=1, key="fun_b").strip()
-        with c4: sf_b  = st.text_input("SF", max_chars=2, key="sf_b").strip()
-        with c5: ai_b  = st.text_input("AI", max_chars=3, key="ai_b").strip()
-        with c6: pp_b  = st.text_input("PP", max_chars=4, key="pp_b").upper().strip()
+        with c4: sf_b = st.text_input("SF", max_chars=2, key="sf_b").strip()
+        with c5: ai_b = st.text_input("AI", max_chars=3, key="ai_b").strip()
+        with c6: pp_b = st.text_input("PP", max_chars=4, key="pp_b").upper().strip()
         if st.button("Validar", key="validar_b"):
+            sf_n, ai_n = normalizar(sf_b, 2), normalizar(ai_b, 3)
             cat_urs = cat_relaciones['urs']
             resultados_b = []
             if ur_b: resultados_b.append(('UR', ur_b, 'SI' if ur_b in cat_urs else 'NO', sorted(cat_urs)[:15] if ur_b not in cat_urs else None))
             if not resultados_b: st.warning("Ingresa al menos un campo")
             else:
                 errores = [r for r in resultados_b if r[2] == 'NO']
-                st.markdown('<div class="result-valid"><strong>✓ VÁLIDO</strong></div>' if not errores else '<div class="result-invalid"><strong>✗ CON ERRORES</strong></div>', unsafe_allow_html=True)
+                st.markdown('<div class="result-valid"><strong> VÁLIDO</strong></div>' if not errores else '<div class="result-invalid"><strong> CON ERRORES</strong></div>', unsafe_allow_html=True)
                 for campo, valor, estado, validos in resultados_b:
-                    if estado == 'SI': st.success(f"✓ **{campo}** = `{valor}`")
-                    else: st.error(f"✗ **{campo}** = `{valor}` → Válidos: {', '.join(validos[:15]) if validos else 'N/A'}")
+                    if estado == 'SI': st.success(f" **{campo}** = `{valor}`")
+                    else: st.error(f" **{campo}** = `{valor}` → Válidos: {', '.join(validos[:15]) if validos else 'N/A'}")
 
 # TAB 5: Partida-TG-FF
 tab_eco = tab5 if todos_catalogos else (tabs[-1] if cat_estructura else None)
 if tab_eco and cat_estructura:
     with tab_eco:
         st.markdown("### Validador Partida-TG-FF")
+        st.caption("Combinaciones TG-FF del catálogo de Estructura Económica")
         c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
         with c1: partida_c = st.text_input("Partida", max_chars=5, key="partida_c").strip()
         with c2: tg_c = st.text_input("TG", max_chars=1, key="tg_c").strip()
         with c3: ff_c = st.text_input("FF", max_chars=1, key="ff_c").strip()
         with c4: st.markdown("<br>", unsafe_allow_html=True); validar_c = st.button("Validar", key="validar_c")
-        partida_tg_ff  = cat_estructura['partida_tg_ff']
-        partida_tg     = cat_estructura['partida_tg']
+        partida_tg_ff = cat_estructura['partida_tg_ff']
+        partida_tg = cat_estructura['partida_tg']
         tg_ff_por_partida = cat_estructura['tg_ff_por_partida']
         if validar_c:
             partida_n = normalizar(partida_c, 5) if partida_c else ""
             if not partida_n and not tg_c: st.warning("Ingresa Partida o TG")
-            elif partida_n and partida_n not in partida_tg_ff: st.error(f"✗ Partida **{partida_n}** no existe")
+            elif partida_n and partida_n not in partida_tg_ff: st.error(f" Partida **{partida_n}** no existe")
             elif partida_n and not tg_c:
                 combos = sorted(partida_tg_ff[partida_n])
-                st.success(f"✓ **{partida_n}** tiene {len(combos)} combos TG-FF:")
+                st.success(f" **{partida_n}** tiene {len(combos)} combos TG-FF:")
                 for tg, ff in combos: st.code(f"TG={tg}, FF={ff}")
             elif partida_n and tg_c and not ff_c:
                 if tg_c in tg_ff_por_partida.get(partida_n, {}): st.success(f"TG={tg_c} → FF válidos: {', '.join(sorted(tg_ff_por_partida[partida_n][tg_c]))}")
-                else: st.error(f"✗ TG **{tg_c}** no válido. Válidos: {', '.join(sorted(partida_tg.get(partida_n, set())))}")
+                else: st.error(f" TG **{tg_c}** no válido. Válidos: {', '.join(sorted(partida_tg.get(partida_n, set())))}")
             elif partida_n and tg_c and ff_c:
-                if tg_c in tg_ff_por_partida.get(partida_n, {}) and ff_c in tg_ff_por_partida[partida_n][tg_c]: st.markdown('<div class="result-valid"><strong>✓ VÁLIDO</strong></div>', unsafe_allow_html=True)
-                else: st.markdown('<div class="result-invalid"><strong>✗ NO VÁLIDO</strong></div>', unsafe_allow_html=True)
+                if tg_c in tg_ff_por_partida.get(partida_n, {}) and ff_c in tg_ff_por_partida[partida_n][tg_c]: st.markdown('<div class="result-valid"><strong> VÁLIDO</strong></div>', unsafe_allow_html=True)
+                else: st.markdown(f'<div class="result-invalid"><strong> NO VÁLIDO</strong></div>', unsafe_allow_html=True)
 
 # TAB 6: Explorar
 tab_explorar = tab6 if todos_catalogos else (tabs[1] if cat_pp_partida else None)
