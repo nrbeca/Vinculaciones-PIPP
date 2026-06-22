@@ -96,7 +96,7 @@ if not st.session_state["autenticado"]:
     st.markdown("""
     <div class="login-box">
         <h2>✓ Validador PIPP 2026</h2>
-        <p>SADER · Secretaría de Agricultura y Desarrollo Rural</p>
+        <p> Secretaría de Agricultura y Desarrollo Rural</p>
     </div>
     """, unsafe_allow_html=True)
     col_l, col_c, col_r = st.columns([1, 2, 1])
