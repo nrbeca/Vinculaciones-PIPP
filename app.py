@@ -458,7 +458,7 @@ def generar_excel_resultados(resultados):
 st.markdown("""
 <div class="main-header">
     <h1>✓ Validador de Claves Presupuestarias PIPP 2026</h1>
-    <p>Sistema de validación usando los 3 catálogos oficiales de SADER</p>
+    <p>Sistema de validación usando los 3 catálogos del PIPP</p>
 </div>
 """, unsafe_allow_html=True)
 
