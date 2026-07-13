@@ -467,7 +467,7 @@ cat_relaciones  = st.session_state.get("cat_rel")
 cat_estructura  = st.session_state.get("cat_eco")
 
 with st.sidebar:
-    st.markdown("### 📂 Catálogos")
+    st.markdown("###  Catálogos")
     st.markdown("---")
 
     LABELS = {
@@ -478,7 +478,7 @@ with st.sidebar:
 
     for key, (label, sk, parser) in LABELS.items():
         ya = st.session_state.get(sk) is not None
-        estado = "✅ Cargado" if ya else "⬜ Sin cargar"
+        estado = " Cargado" if ya else " Sin cargar"
         st.markdown(f"**{label}**  \n{estado}")
         archivo = st.file_uploader("Actualizar" if ya else "Subir", type=['xlsx'], key=f"up_{key}")
         if archivo:
@@ -497,7 +497,7 @@ with st.sidebar:
     cat_relaciones  = st.session_state.get("cat_rel")
     cat_estructura  = st.session_state.get("cat_eco")
 
-    st.markdown("### 📊 Estadísticas")
+    st.markdown("###  Estadísticas")
     if cat_pp_partida:
         total_partidas = sum(len(v) for v in cat_pp_partida.values())
         st.markdown(f'<div class="stat-card"><div class="stat-number">{len(cat_pp_partida)}</div><div class="stat-label">Programas (Pp)</div></div>', unsafe_allow_html=True)
@@ -512,7 +512,7 @@ with st.sidebar:
     else: st.caption("Catálogo C no cargado")
 
     st.markdown("---")
-    if st.button("🔒 Cerrar sesión"):
+    if st.button(" Cerrar sesión"):
         st.session_state["autenticado"] = False
         st.rerun()
 
@@ -520,7 +520,7 @@ hay_catalogos  = cat_pp_partida or cat_relaciones or cat_estructura
 todos_catalogos = cat_pp_partida and cat_relaciones and cat_estructura
 
 if not hay_catalogos:
-    st.info("📂 Carga al menos un catálogo en la barra lateral para comenzar.")
+    st.info(" Carga al menos un catálogo en la barra lateral para comenzar.")
     st.stop()
 
 if todos_catalogos:
@@ -571,7 +571,7 @@ if todos_catalogos:
                 for campo in ['RAMO', 'UR', 'AÑO', 'FIN', 'FUN', 'SF', 'RG', 'AI', 'PP', 'PARTIDA', 'TG', 'FF', 'EF', 'PPI', 'AUX2', 'COP']:
                     if campo in res:
                         if res[campo] == 'SI': st.success(f" **{campo}** = `{c_norm.get(campo, '')}`")
-                        else: st.error(f"❌ **{campo}** = `{c_norm.get(campo, '')}` → Válidos: {sug.get(campo, '')}")
+                        else: st.error(f" **{campo}** = `{c_norm.get(campo, '')}` → Válidos: {sug.get(campo, '')}")
 
 # TAB 2: Validación Masiva
 if todos_catalogos:
